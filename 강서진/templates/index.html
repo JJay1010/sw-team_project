@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- {% for routine in routines %}
+    <p>{{ routine.routine_name, routine.weekday }}</p>
+    {% endfor %} -->
+
+    <hr>
+
+    {% for weekly_routine in weekly_routines %}
+    {% for wr in weekly_routine %}
+    <p> {{ wr.routine_name }}</p>
+    <p> {{ wr.weekday }}</p>
+    {% endfor %}
+    {% endfor %}
+
+
+
+</body>
+</html>
