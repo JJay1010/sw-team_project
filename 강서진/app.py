@@ -6,9 +6,10 @@ from flask_migrate import Migrate
 from models import User, Animal, Routine, ChecklistDefault, ChecklistRoutine
 import datetime
 from connect_db import db
+import json
+import pandas as pd
 
 app = Flask(__name__)
-
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
@@ -16,6 +17,16 @@ app.config['SECRET_KEY'] = "test"
 db.init_app(app)
 
 Migrate(app,db)
+
+# -----------------
+# from number to weekday
+# -----------------
+def to_weekday(num):
+    weekdays = ['mon','tue','wed','thu','fri','sat','sun']
+    num = int(num)
+    return weekdays[num]
+
+
 
 
 @app.route('/', methods=["GET", "POST"])
@@ -27,6 +38,8 @@ def checklist():
 
 
     # checklist db에 저장
+    # 0. 오늘 처음 기록 -- checklist_default, checklist_routines 오늘 날짜 비어있으면 전부 add
+    # 1. 기록 수정 및 추가 -- 오늘 날짜 비어있는 부분에만 add, 나머지는 update?
     if request.method=="POST":
     
         checks = request.get_json() 
@@ -37,12 +50,12 @@ def checklist():
         bowels = checks['bowels']
         note = checks['note']
 
-        # multiple routines --> ?
+        # uhh multiple routines --> will probably numbered?
+
         routine_id = checks['routine_id']
         routine_name = checks['routine_name']
         status = checks['status']
 
-        # model class에 init을 만들면 이렇게 안써도 되긴 함
         checklist_default = ChecklistDefault() 
         checklist_default.currdate = currdate
         checklist_default.animal_id = animal_id
@@ -66,27 +79,50 @@ def checklist():
         return jsonify(checks)
     
 
-    # checklist 열람
-    else:
-        routines = Routine.query.filter(Routine.animal_id == session['curr_animal']) # 1,2,3,4
+    else: # GET
 
-        weekdays = ['mon','tue','wed','thu','fri','sat','sun']
+        # 0. 설정한 routine이 없을 때 -- default만 표시
+        # 0-0. 완전 처음 사용해서 routine도, default 기록도 없을 때
+        # 1. 오늘 처음 기록 입력시 -- 오늘의 routines json 반환
+        # 2. 기록 수정 + 추가 -- checklist_default, checklist_routines json 반환
 
-        # weekly_routines = []
+        checklists_default = ChecklistDefault.query.filter(ChecklistDefault.animal_id == session['curr_animal'])
+        checklists_routine = ChecklistRoutine.query.filter(ChecklistRoutine.animal_id == session['curr_animal'])
+        routines = Routine.query.filter(Routine.animal_id == session['curr_animal'])
 
-        # for weekday in weekdays: 
-        #     lst = []
-        #     for routine in routines:
-        #         if routine.weekday == weekday:
-        #             lst.append(routine)
+        if routines == None:
+            print("no routines")
 
-        #     weekly_routines.append(lst)
+        if checklists_default == None:
+            print("no default checklist")
 
-        weekly_routines = [[routine for routine in routines if routine.weekday == weekday] for weekday in weekdays]
+        for checklist_default in checklists_default:
+            if checklist_default.currdate == str(datetime.datetime.now().date()):
+                checklist_default = checklist_default.__dict__
+                del checklist_default['_sa_instance_state']
 
 
-    return render_template('index.html', routines=routines, weekly_routines=weekly_routines)
-    # return jsonify()
+
+
+
+        # 1. 
+        today_weekday = str(datetime.datetime.now().weekday()) # 4
+
+        
+
+        today_lst = []
+        for routine in routines:
+            if routine.weekday == today_weekday:
+                routine = routine.__dict__
+                del routine['_sa_instance_state']
+                today_lst.append(routine)
+
+        # for lst in today_lst:
+            # lst 형태는 {'animal_id': 1, 'routine_name': 'teeth', 'routine_id': 4, 'weekday': '4'}, dict
+             # 4 = fri
+
+
+    return         
 
 if __name__ == "__main__":
     app.run(debug=True)

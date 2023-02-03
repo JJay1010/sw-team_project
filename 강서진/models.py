@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import date
+import datetime
 from connect_db import db
+import json
 # db = SQLAlchemy()
 
 class User(db.Model):
@@ -46,25 +47,37 @@ class Routine(db.Model):
     routine_name= db.Column(db.String(20), nullable=False)
     weekday = db.Column(db.String(10), nullable=False)
 
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+
 
 class ChecklistDefault(db.Model):
     __tablename__ = 'checklist_default'
 
     index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
-    currdate = db.Column(db.DateTime, nullable=False, unique=True, default=date.today())
+    currdate = db.Column(db.String(10), nullable=False, unique=True, default=datetime.datetime.now().date())
     animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
 
     food = db.Column(db.String(10))
     bowels = db.Column(db.String(10))
     note = db.Column(db.String(100))
 
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+
 
 class ChecklistRoutine(db.Model):
     __tablename__='checklist_routine'
 
     index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
-    currdate = db.Column(db.DateTime, nullable=False, unique=True, default=date.today())
+    currdate = db.Column(db.String(10), nullable=False, unique=True, default=datetime.datetime.now().date())
     animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
     routine_id = db.Column(db.ForeignKey('Routine.routine_id'), nullable=False)
     routine_name = db.Column(db.String(20), nullable=False)
-    status = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.Integer, nullable=False, default="0")
+
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
