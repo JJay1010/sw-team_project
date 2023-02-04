@@ -4,7 +4,7 @@ from sqlalchemy import and_
 from flask_migrate import Migrate
 
 # for checklist
-from models import User, Animal, Routine, ChecklistDefault, ChecklistRoutine
+from models import Routine, ChecklistDefault, ChecklistRoutine
 import datetime
 from connect_db import db
 import json
@@ -83,33 +83,10 @@ def checklist():
     else:   # POST
         checks = request.get_json() 
 
-        # default box
-        currdate = datetime.datetime.now().date()
-        animal_id = checks['animal_id']
-        food = checks['food']
-        bowels = checks['bowels']
-        note = checks['note']
-
-        checklist_default = ChecklistDefault() 
-        checklist_default.currdate = currdate
-        checklist_default.animal_id = animal_id
-        checklist_default.food = food
-        checklist_default.bowels = bowels
-        checklist_default.note = note
-
-        db.session.add(checklist_default)
-
-
-        # routine box
-        # ------------------
-        # 루틴이 1개 이상 ...         
-        # 오늘 설정된 routine 개수만큼 ChecklistRoutine 객체 생성하여 db 세션에 add
-        # ------------------
-        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num))
-        
-        json_routines = checks['routines']
-
         # json 안에 json, key값 임의로 설정
+
+        # checks
+        # ----------------
         # {
         #     "currdate":"2023-02-05",
         #     "animal_id":1,
@@ -133,6 +110,33 @@ def checklist():
         #         }
         #     }
         # }
+
+
+        # default checklist
+        currdate = datetime.datetime.now().date()
+        animal_id = checks['animal_id']
+        food = checks['food']
+        bowels = checks['bowels']
+        note = checks['note']
+
+        checklist_default = ChecklistDefault() 
+        checklist_default.currdate = currdate
+        checklist_default.animal_id = animal_id
+        checklist_default.food = food
+        checklist_default.bowels = bowels
+        checklist_default.note = note
+
+        db.session.add(checklist_default)
+
+
+        # routine checklist
+        # ------------------
+        # 루틴 1개 이상       
+        # 오늘 설정된 routine 개수만큼 ChecklistRoutine 객체 생성하여 db 세션에 add
+        # ------------------
+        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num))
+        
+        json_routines = checks['routines']
 
         j = 0
         for routine in routines:
