@@ -71,11 +71,11 @@ def checklist():
 
         # routine이 있을 시, default 와 routine json 반환
         else: 
-            # 오늘 요일과 일치하는 routine 딕셔너리를 리스트에 넣어 반환
+            # 오늘 요일과 일치하는 routine 딕셔너리 리스트
             today_routines = query_to_dict(routines)
-            # 오늘 날짜와 일치하는 checklist_default 1개 레코드 반환 
+            # 오늘 날짜와 일치하는 checklist_default 딕셔너리
             checklist_d = query_to_dict(checklist_default)[0]
-            # 오늘 날짜와 일치하는 checklists_routine n개 리스트에 넣어 반환
+            # 오늘 날짜와 일치하는 checklists_routine n개 딕셔너리 
             checklist_r = query_to_dict(checklists_routine)
             return render_template('index.html', routines=jsonify(today_routines), checklist_d=jsonify(checklist_d), checklist_r=jsonify(checklist_r))
    
@@ -138,6 +138,8 @@ def checklist():
         
         json_routines = checks['routines']
 
+        
+        # query에는 len 못써서 일단 for문 사용
         j = 0
         for routine in routines:
             j += 1
