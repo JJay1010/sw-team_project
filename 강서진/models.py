@@ -41,9 +41,8 @@ class Animal(db.Model):
 
 class Routine(db.Model):
     __tablename__= 'Routine'
-    routine_id = db.Column(db.Integer, primary_key=True)
+    routine_id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     animal_id = db.Column(db.Integer, nullable=False)
-    # animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'))
     routine_name= db.Column(db.String(20), nullable=False)
     weekday = db.Column(db.String(10), nullable=False)
 
@@ -56,7 +55,7 @@ class ChecklistDefault(db.Model):
     __tablename__ = 'checklist_default'
 
     index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
-    currdate = db.Column(db.String(10), nullable=False, unique=True, default=datetime.datetime.now().date())
+    currdate = db.Column(db.String(20), nullable=False, default=datetime.datetime.now().date())
     animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
 
     food = db.Column(db.String(10))
@@ -72,7 +71,7 @@ class ChecklistRoutine(db.Model):
     __tablename__='checklist_routine'
 
     index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
-    currdate = db.Column(db.String(10), nullable=False, unique=True, default=datetime.datetime.now().date())
+    currdate = db.Column(db.String(20), nullable=False, default=datetime.datetime.now().date())
     animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
     routine_id = db.Column(db.ForeignKey('Routine.routine_id'), nullable=False)
     routine_name = db.Column(db.String(20), nullable=False)
