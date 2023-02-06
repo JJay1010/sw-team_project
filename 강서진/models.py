@@ -46,9 +46,11 @@ class Routine(db.Model):
     routine_name= db.Column(db.String(20), nullable=False)
     weekday = db.Column(db.String(10), nullable=False)
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, 
-            sort_keys=True, indent=4)
+    def __init__(self, routine_id, animal_id, routine_name, weekday):
+        self.routine_id = routine_id
+        self.animal_id = animal_id
+        self.routine_name = routine_name
+        self.weekday = weekday
 
 
 class ChecklistDefault(db.Model):
@@ -62,9 +64,12 @@ class ChecklistDefault(db.Model):
     bowels = db.Column(db.String(10))
     note = db.Column(db.String(100))
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, 
-            sort_keys=True, indent=4)
+    def __init__(self, currdate, animal_id, food, bowels, note):
+        self.currdate = currdate
+        self.animal_id = animal_id
+        self.food = food
+        self.bowels = bowels
+        self.note = note
 
 
 class ChecklistRoutine(db.Model):
@@ -77,6 +82,9 @@ class ChecklistRoutine(db.Model):
     routine_name = db.Column(db.String(20), nullable=False)
     status = db.Column(db.Integer, nullable=False, default="0")
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, 
-            sort_keys=True, indent=4)
+    def __init__(self, currdate, animal_id, routine_id, routine_name, status):
+        self.currdate = currdate
+        self.animal_id = animal_id
+        self.routine_id = routine_id
+        self.routine_name = routine_name
+        self.status = status
