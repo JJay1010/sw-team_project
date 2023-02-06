@@ -1,4 +1,4 @@
-from flask import Flask, g, session, request, jsonify, render_template
+from flask import Flask, g, session, request, jsonify, render_template, Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
 from flask_migrate import Migrate
@@ -9,13 +9,13 @@ import datetime
 from connect_db import db
 import json
 
-app = Flask(__name__)
+bp = Blueprint('update', __name__, url_prefix='/')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
-app.config['SECRET_KEY'] = "test"
-db.init_app(app)
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
+# app.config['SECRET_KEY'] = "test"
+# db.init_app(app)
 
-Migrate(app,db)
+# Migrate(app,db)
 
 
 # -----------------
@@ -38,7 +38,28 @@ def query_to_dict(objs):
     return lst
 
 
-@app.route('/update', methods=["GET", "POST"])
+# -----------------
+# update checklist_default
+# -----------------
+def update_cd(js, record):
+    food = js['food']
+    bowels = js['bowels']
+    note = js['note']
+
+    record.food = food
+    record.bowels = bowels
+    record.note = note
+
+    return record
+
+
+# -----------------
+# update checklist_routine
+# -----------------
+# def update_cr(js, record):
+
+
+@bp.route('/update', methods=["GET", "POST"])
 def checklist():
 
     # 임의로 설정한 user & animal, 나중에 삭제
@@ -65,22 +86,19 @@ def checklist():
 
         # routine이 있을 시, default 와 routine json 반환
         if routines:
-            # 오늘 요일과 일치하는 routine 딕셔너리 리스트
+
             today_routines = query_to_dict(routines)
-            # 오늘 날짜와 일치하는 checklist_default 딕셔너리
             checklist_d = query_to_dict(checklist_default)[0]
-            # 오늘 날짜와 일치하는 checklists_routine n개 딕셔너리 
             checklist_r = query_to_dict(checklists_routine)
             db.session.close()
-            return render_template('index.html', routines=jsonify(today_routines), checklist_d=jsonify(checklist_d), checklist_r=jsonify(checklist_r))
+            return jsonify(today_routines), jsonify(checklist_d), jsonify(checklist_r)
 
-        # routine이 없을 시, default 만 반환 (임시로 index.html 설정해놓음)      
+        # routine이 없을 시, default 만 반환 
         else: 
             checklist_d = query_to_dict(checklist_default)[0]
             db.session.close()
-        
 
-            return render_template('index.html', checklist_d=checklist_d)
+            return jsonify(checklist_d)
    
 
     else: # POST
@@ -89,24 +107,16 @@ def checklist():
                                                                 ChecklistDefault.currdate == current_date)).first()
         
         checks = request.get_json() 
-
         currdate = datetime.datetime.now().date()
         animal_id = checks['animal_id']
-        food = checks['food']
-        bowels = checks['bowels']
-        note = checks['note']
-
-        json_routines = checks['routines']
-
-        checklist_default.food = food
-        checklist_default.bowels = bowels
-        checklist_default.note = note
+        
+        # checklist default update
+        update_cd(checks, checklist_default)
         
         db.session.commit()
 
-        # checklist_routine
-        # query에는 len 못써서 일단 for문 사용
-
+        # checklist_routine update
+        json_routines = checks['routines']
         checklists_routine = ChecklistRoutine.query.filter(and_(ChecklistRoutine.animal_id == current_animal, 
                                                                 ChecklistRoutine.currdate == current_date)).all()
 
@@ -127,9 +137,8 @@ def checklist():
 
             db.session.commit()
     
-    return render_template('index.html', checks = jsonify(checks))
-    
+    return jsonify(checks)
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# if __name__ == "__main__":
+#     app.run(debug=True)
