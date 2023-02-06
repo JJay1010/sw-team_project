@@ -1,4 +1,4 @@
-from flask import Flask, g, session, request, jsonify, render_template, redirect, Blueprint
+from flask import Flask, g, session, request, jsonify, render_template, redirect, Blueprint, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
 from flask_migrate import Migrate
@@ -34,12 +34,15 @@ Migrate(app,db)
 # from db.query to dictionary (in list)
 # -----------------
 def query_to_dict(objs):
-    lst = []
-    for obj in objs:
-        obj = obj.__dict__
-        del obj['_sa_instance_state']
-        lst.append(obj)
-    return lst
+    try:
+        lst = []
+        for obj in objs:
+            obj = obj.__dict__
+            del obj['_sa_instance_state']
+            lst.append(obj)
+        return lst
+    except TypeError:
+        return None
 
 
 # -----------------
@@ -72,7 +75,6 @@ def json_to_new_cr(animal_id, routine):
     return new_cr
 
 
-
 @app.route('/checklist', methods=["GET", "POST"])
 def checklist():
 
@@ -94,35 +96,36 @@ def checklist():
         # -----------------
     
         checklist_default = ChecklistDefault.query.filter(and_(ChecklistDefault.animal_id == current_animal, 
-                                                                ChecklistDefault.currdate == current_date))
+                                                                ChecklistDefault.currdate == current_date)).first()
         checklists_routine = ChecklistRoutine.query.filter(and_(ChecklistRoutine.animal_id == current_animal, 
-                                                                ChecklistRoutine.currdate == current_date))
-        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num))
-
+                                                                ChecklistRoutine.currdate == current_date)).all()
+        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num)).all()
 
         if checklist_default != None:
-            return redirect('/update')
+            return redirect(url_for('update.checklist_update'))
 
-        elif checklists_routine != None:
-            return redirect('/update')
+
+        # -----------------
+        # checklist 레코드 없을 때 checklist에서 insert
+        # -----------------
 
         # routine이 있을 시, default 와 routine json 반환
-        if routines:
+        if routines != []:
             today_routines = query_to_dict(routines)
-            checklist_d = query_to_dict(checklist_default)[0]
+            checklist_d = query_to_dict(checklist_default)
  
             checklist_r = query_to_dict(checklists_routine)
-            return jsonify(today_routines), jsonify(checklist_d), jsonify(checklist_r)
+            return jsonify(today_routines, checklist_d, checklist_r)
 
         # routine이 없을 시, default 만 반환
         else: 
-            checklist_d = query_to_dict(checklist_default)[0]
+            checklist_d = query_to_dict(checklist_default)
             return jsonify(checklist_d)
    
 
     else: # POST
 
-        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num))
+        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num)).all()
         checks = request.get_json() 
         json_routines = checks['routines']
 

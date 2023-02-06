@@ -76,11 +76,12 @@ class ChecklistRoutine(db.Model):
     __tablename__='checklist_routine'
 
     index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
-    currdate = db.Column(db.String(20), nullable=False, default=datetime.datetime.now().date())
-    animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
     routine_id = db.Column(db.ForeignKey('Routine.routine_id'), nullable=False)
-    routine_name = db.Column(db.String(20), nullable=False)
-    status = db.Column(db.Integer, nullable=False, default="0")
+    animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
+    
+    currdate = db.Column(db.String(20), nullable=False, default=datetime.datetime.now().date())
+    routine_name = db.Column(db.String(20))
+    status = db.Column(db.Integer, default="0")
 
     def __init__(self, currdate, animal_id, routine_id, routine_name, status):
         self.currdate = currdate
@@ -88,3 +89,42 @@ class ChecklistRoutine(db.Model):
         self.routine_id = routine_id
         self.routine_name = routine_name
         self.status = status
+
+
+class Journal(db.Model):
+    __tablename__ = 'journal'
+
+    index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
+    animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
+    user_id = db.Column(db.ForeignKey('user.user_id'), nullable=False)
+
+    image = db.Column(db.String)
+    content = db.Column(db.String)
+    currdate = db.Column(db.String(10))
+
+    def __init__(self, animal_id, user_id, image, content, currdate):
+        self.animal_id = animal_id
+        self.user_id = user_id
+        self.image = image
+        self.content = content
+        self.currdate = currdate
+
+
+class Health(db.Model):
+    __tablename__ = 'health'
+
+    index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
+    animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
+    user_id = db.Column(db.ForeignKey('user.user_id'), nullable=False)
+
+    image = db.Column(db.String)
+    comment = db.Column(db.String)
+    currdate = db.Column(db.String(10))
+
+    def __init__(self, animal_id, user_id, image, comment, currdate):
+        self.animal_id = animal_id
+        self.user_id = user_id
+        self.image = image
+        self.comment = comment
+        self.currdate = currdate
+

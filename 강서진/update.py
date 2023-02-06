@@ -11,6 +11,10 @@ import json
 
 bp = Blueprint('update', __name__, url_prefix='/')
 
+# __________________________________________________________________________
+# update는 insert하는 폼이랑 똑같이 생긴 다른 템플릿으로 받으면 될 것 같은데...!! 
+
+
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
 # app.config['SECRET_KEY'] = "test"
 # db.init_app(app)
@@ -19,24 +23,23 @@ bp = Blueprint('update', __name__, url_prefix='/')
 
 
 # -----------------
-# from number to weekday
-# -----------------
-def to_weekday(num):
-    weekdays = ['mon','tue','wed','thu','fri','sat','sun']
-    num = int(num)
-    return weekdays[num]
-
-# -----------------
 # from db.query to dictionary (in list)
 # -----------------
 def query_to_dict(objs):
-    lst = []
-    for obj in objs:
-        obj = obj.__dict__
-        del obj['_sa_instance_state']
-        lst.append(obj)
-    return lst
-
+    try:
+        lst = []
+        for obj in objs:
+            obj = obj.__dict__
+            del obj['_sa_instance_state']
+            lst.append(obj)
+        return lst
+    except TypeError: # non-iterable
+        lst = []
+        objs = objs.__dict__
+        del objs['_sa_instance_state']
+        lst.append(objs)
+        return lst
+        
 
 # -----------------
 # update checklist_default
@@ -53,14 +56,8 @@ def update_cd(js, record):
     return record
 
 
-# -----------------
-# update checklist_routine
-# -----------------
-# def update_cr(js, record):
-
-
 @bp.route('/update', methods=["GET", "POST"])
-def checklist():
+def checklist_update():
 
     # 임의로 설정한 user & animal, 나중에 삭제
     session['login'] = 'test'
@@ -75,28 +72,30 @@ def checklist():
 
 
     if request.method=="GET": # GET
-        # 레코드 있을 때 / 없을 때 구분 필요
     
+        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num)).all()
         checklist_default = ChecklistDefault.query.filter(and_(ChecklistDefault.animal_id == current_animal, 
-                                                                ChecklistDefault.currdate == current_date))
+                                                                ChecklistDefault.currdate == current_date)).first()
         checklists_routine = ChecklistRoutine.query.filter(and_(ChecklistRoutine.animal_id == current_animal, 
-                                                                ChecklistRoutine.currdate == current_date))
-        routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num))
-
+                                                                ChecklistRoutine.currdate == current_date)).all()
+        
 
         # routine이 있을 시, default 와 routine json 반환
-        if routines:
+        if routines != []:
 
             today_routines = query_to_dict(routines)
-            checklist_d = query_to_dict(checklist_default)[0]
+            checklist_d = query_to_dict(checklist_default)
             checklist_r = query_to_dict(checklists_routine)
-            db.session.close()
-            return jsonify(today_routines), jsonify(checklist_d), jsonify(checklist_r)
+
+            print("routines exist")
+            
+            return jsonify(today_routines, checklist_d, checklist_r)
+
 
         # routine이 없을 시, default 만 반환 
         else: 
-            checklist_d = query_to_dict(checklist_default)[0]
-            db.session.close()
+            checklist_d = query_to_dict(checklist_default)
+            print("no routines, only default")
 
             return jsonify(checklist_d)
    
