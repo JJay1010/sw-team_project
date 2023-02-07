@@ -12,12 +12,12 @@ def s3_connection():
             aws_access_key_id=AWS_ACCESS_KEY,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )
-    except Exception as e:
-        print(e)
-        print('ERROR_S3_CONNECTION_FAILED')
-    else:
         print("s3 bucket connected!") 
         return s3
+
+    except Exception as e:
+        print(e)
+        print('ERROR_S3_CONNECTION_FAILED')       
         
 
 def s3_put_object(s3, bucket, filepath, filename):
