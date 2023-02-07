@@ -4,6 +4,7 @@ from sqlalchemy import and_
 from flask_migrate import Migrate
 
 import update
+import journal
 
 # for checklist
 from models import Routine, ChecklistDefault, ChecklistRoutine
@@ -14,6 +15,7 @@ import json
 app = Flask(__name__)
 
 app.register_blueprint(update.bp)
+app.register_blueprint(journal.bp)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
 app.config['SECRET_KEY'] = "test"
@@ -21,14 +23,6 @@ db.init_app(app)
 
 Migrate(app,db)
 
-
-# -----------------
-# from number to weekday
-# -----------------
-# def to_weekday(num):
-#     weekdays = ['mon','tue','wed','thu','fri','sat','sun']
-#     num = int(num)
-#     return weekdays[num]
 
 # -----------------
 # from db.query to dictionary (in list)
@@ -55,9 +49,9 @@ def json_to_new_cd(js):
     bowels = js['bowels']
     note = js['note']
 
-    new_check_d = ChecklistDefault(currdate, animal_id, food, bowels, note)
+    new_cd = ChecklistDefault(currdate, animal_id, food, bowels, note)
 
-    return new_check_d
+    return new_cd
 
 
 # ----------------
@@ -91,9 +85,6 @@ def checklist():
 
 
     if request.method=="GET": # GET
-        # -----------------
-        # checklist 레코드 있을 때 update로 리다이렉트
-        # -----------------
     
         checklist_default = ChecklistDefault.query.filter(and_(ChecklistDefault.animal_id == current_animal, 
                                                                 ChecklistDefault.currdate == current_date)).first()
@@ -101,47 +92,59 @@ def checklist():
                                                                 ChecklistRoutine.currdate == current_date)).all()
         routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num)).all()
 
-        if checklist_default != None:
-            return redirect(url_for('update.checklist_update'))
+
+        # routine이 없음 --> default만 
+        if routines == []:
+            # checklist_default 기록이 있음 --> 수정으로 넘어감
+            if checklist_default != None:
+                return redirect(url_for('update.checklist_update'))
+
+            # checklist_default 기록이 없음 --> 입력 폼만 반환
+            else: 
+                return "checklist_default form"
 
 
-        # -----------------
-        # checklist 레코드 없을 때 checklist에서 insert
-        # -----------------
-
-        # routine이 있을 시, default 와 routine json 반환
-        if routines != []:
-            today_routines = query_to_dict(routines)
-            checklist_d = query_to_dict(checklist_default)
- 
-            checklist_r = query_to_dict(checklists_routine)
-            return jsonify(today_routines, checklist_d, checklist_r)
-
-        # routine이 없을 시, default 만 반환
+        # routine이 있음 --> default와 routine 둘 다
         else: 
-            checklist_d = query_to_dict(checklist_default)
-            return jsonify(checklist_d)
+            # checklist_default 기록이 있음 
+            # (== 자동으로 checklist_routine 기록도 있음) --> 수정으로 넘어감
+            if checklist_default != None:
+                # today_routines = query_to_dict(routines)
+                # checklist_d = query_to_dict(checklist_default)
+                # checklist_r = query_to_dict(checklists_routine)
+                return redirect(url_for('update.checklist_update'))
+
+            # checklist_default, checklist_routine 기록이 없음 --> routine json, 입력 폼 반환
+            else:
+                today_routines = query_to_dict(routines)
+                return jsonify(today_routines)
    
 
     else: # POST
 
         routines = Routine.query.filter(and_(Routine.animal_id == current_animal, Routine.weekday == current_weekday_num)).all()
         checks = request.get_json() 
-        json_routines = checks['routines']
 
-        # default checklist insert
-        new_cd = json_to_new_cd(checks)
-        db.session.add(new_cd)
+        # 기록된 routine이 없음 --> checklist_default만 기록
+        if routines == []:
+            new_cd = json_to_new_cd(checks)
+            db.session.add(new_cd)
 
-        # routine checklist insert
-        j = 0
-        for r in routines:
-            j += 1
+        # 기록된 routine이 있음 --> checklist_default와 checklist_routine 기록
+        else:
+            json_routines = checks['routines']
 
-        for i in range(j):
-            routine = json_routines[f'routine{i+1}']
-            new_cr = json_to_new_cr(checks['animal_id'], routine)
-            db.session.add(new_cr)
+            new_cd = json_to_new_cd(checks)
+            db.session.add(new_cd)
+
+            j = 0
+            for r in routines:
+                j += 1
+
+            for i in range(j):
+                routine = json_routines[f'routine{i+1}']
+                new_cr = json_to_new_cr(checks['animal_id'], routine)
+                db.session.add(new_cr)      
         
         db.session.commit()
 
