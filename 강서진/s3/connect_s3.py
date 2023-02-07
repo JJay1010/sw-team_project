@@ -20,9 +20,9 @@ def s3_connection():
         return s3
         
 
-def s3_put_object(s3, bucket, filepath, access_key):
+def s3_put_object(s3, bucket, filepath, filename):
     try:
-        s3.upload_file(filepath, bucket, access_key)
+        s3.upload_file(filepath, bucket, filename)
     except Exception as e:
         print(e)
         return False
