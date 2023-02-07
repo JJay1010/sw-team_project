@@ -8,6 +8,7 @@
 - dict_to_json 함수 &, update로 redirect 수정
 
 ---2023.02.07---
-- s3에 이미지 업로드는 개인 계정으로 공부, 퍼블릭 버킷 생성은 서버용 노트북 및 계정 받은 후
+- aws s3 test bucket cosmosaurtest (public)
+- 폼으로 이미지 받아 로컬에 저장 - 해당 이미지 s3에 업로드 - 이미지 링크 가져와서 출력 되는 것 확인. 
 - 일상 기록 기능 구현 목표
 - login과 합치기 목표
