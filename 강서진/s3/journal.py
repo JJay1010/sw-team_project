@@ -1,0 +1,129 @@
+from flask import Flask, render_template, jsonify, request, session, Blueprint
+import boto3
+import datetime
+from connect_db import db
+from sqlalchemy import and_
+from models import Journal
+
+# from werkzeug.utils import secure_filename
+# from predict import padding, mk_img, predict_result
+
+from config import AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_BUCKET_REGION
+
+import os
+
+# app = Flask(__name__)
+bp = Blueprint('journal', __name__, url_prefix='/')
+
+
+# s3 클라이언트 생성
+def s3_connection():
+    try:
+        s3 = boto3.client(
+            service_name="s3",
+            region_name=AWS_S3_BUCKET_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+        return s3
+
+    except Exception as e:
+        print(e)
+        print('ERROR_S3_CONNECTION_FAILED') 
+
+
+# 파일 업로드 받아서 s3 업로드, 이미지 링크 반환
+def put_s3_img_url(f):
+    newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
+
+    imgpath = f"./static/{newname}"
+    f.save(imgpath)
+
+    s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
+    img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+    
+    return img_url
+
+
+# 쿼리 결과를 딕셔너리로 변환
+def query_to_dict(objs):
+    try:
+        lst = []
+        for obj in objs:
+            obj = obj.__dict__
+            del obj['_sa_instance_state']
+            lst.append(obj)
+        return lst
+    except TypeError:
+        return None
+
+
+
+s3 = s3_connection()
+
+
+@bp.route('/journal', methods = ['GET', 'POST'])
+def journal():
+    if request.method == 'GET':
+
+        # 임의로 설정한 user & animal, 나중에 삭제
+        session['login'] = 'test'
+        session['curr_animal'] = 1
+
+        current_user = session['login']
+        current_animal = session['curr_animal']
+        current_date = datetime.datetime.now().date()
+
+        ## ----------------------------------------------------------
+
+        today_entry = Journal.query.filter(and_(Journal.user_id==current_user,
+                                                Journal.currdate == current_date)).first()
+        today_entry = query_to_dict(today_entry)
+
+        # 오늘의 기록 존재시
+        if today_entry != None:
+            return jsonify(today_entry)
+
+        # 오늘의 기록이 없을 시
+        else:
+            return render_template('index.html')
+        
+
+    # 
+    else: # POST
+
+        journal_entry = request.get_json()
+
+        animal_id = journal_entry['animal_id']
+        user_id = journal_entry['user_id']
+
+        title = journal_entry['title']
+        content = journal_entry['content']
+        currdate = journal_entry['currdate']
+
+
+        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장
+        f = request.files['file']
+
+        if f:
+            img_url = put_s3_img_url(f)
+            image = img_url
+            new_entry = Journal(animal_id, user_id, title, image, content, currdate)
+            db.session.add(new_entry)
+
+        # 사진 업로드 x시 기록만 db 저장
+        else:
+            
+            image = None
+            new_entry = Journal(animal_id, user_id, title, image, content, currdate)
+            db.session.add(new_entry)
+
+        db.session.commit()
+        
+        return jsonify(new_entry)
+
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+
