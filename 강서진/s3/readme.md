@@ -1,3 +1,4 @@
 ---2023.02.07---
 - aws s3 test bucket cosmosaurtest (public, policy for geObject, putObject)
 - 폼으로 이미지 받아 로컬에 저장 - 해당 이미지 s3에 업로드 - 이미지 링크 가져와서 출력 되는 것 확인
+- journal.py
