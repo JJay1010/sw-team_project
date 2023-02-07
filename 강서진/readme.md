@@ -14,5 +14,6 @@
 - 일상 기록 기능 구현
 - login과 합치기
 
+
 - TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
 - 이미지랑 기록 한 번에 보내기 (POST)
