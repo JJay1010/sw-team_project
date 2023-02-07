@@ -10,10 +10,6 @@
 ---2023.02.07---
 - checklist-update redirect 오류 수정
 - aws s3 테스트용으로 공개 버킷 cosmosaurtest 생성 - iam 사용자 생성, amazons3fullaccess 
-- 폼으로 이미지 받아 로컬에 저장 - 해당 이미지 s3에 업로드 - 이미지 링크 가져와서 출력 되는 것 확인. 
-- 일상 기록 기능 구현
-- login과 합치기
+- 일상 기록 기능 구현 --> 따로는 저장이 되는데 이미지랑 기록 한 번에 전송하면 오류
 
-
-- TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
-- 이미지랑 기록 한 번에 보내기 (POST)
+---2023.02.08---
