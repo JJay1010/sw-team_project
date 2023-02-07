@@ -5,7 +5,7 @@ from connect_db import db
 from sqlalchemy import and_
 from models import Journal
 
-# from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename
 # from predict import padding, mk_img, predict_result
 
 from config import AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_BUCKET_REGION
@@ -58,7 +58,6 @@ def query_to_dict(objs):
         return None
 
 
-
 s3 = s3_connection()
 
 
@@ -86,10 +85,9 @@ def journal():
 
         # 오늘의 기록이 없을 시
         else:
-            return render_template('index.html')
+            return "journal entry form"
         
 
-    # 
     else: # POST
 
         journal_entry = request.get_json()
@@ -101,6 +99,7 @@ def journal():
         content = journal_entry['content']
         currdate = journal_entry['currdate']
 
+        print(currdate)
 
         # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장
         f = request.files['file']
@@ -111,16 +110,17 @@ def journal():
             new_entry = Journal(animal_id, user_id, title, image, content, currdate)
             db.session.add(new_entry)
 
+
         # 사진 업로드 x시 기록만 db 저장
         else:
-            
-            image = None
+            image = ""
             new_entry = Journal(animal_id, user_id, title, image, content, currdate)
+            
             db.session.add(new_entry)
 
         db.session.commit()
-        
-        return jsonify(new_entry)
+    
+        return jsonify(journal_entry)
 
 
 # if __name__ == '__main__':
