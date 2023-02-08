@@ -98,13 +98,15 @@ class Journal(db.Model):
     animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
     user_id = db.Column(db.ForeignKey('user.user_id'), nullable=False)
 
+    title = db.Column(db.String)
     image = db.Column(db.String)
     content = db.Column(db.String)
     currdate = db.Column(db.String(10))
 
-    def __init__(self, animal_id, user_id, image, content, currdate):
+    def __init__(self, animal_id, user_id, title, image, content, currdate):
         self.animal_id = animal_id
         self.user_id = user_id
+        self.title = title
         self.image = image
         self.content = content
         self.currdate = currdate
@@ -117,14 +119,15 @@ class Health(db.Model):
     animal_id = db.Column(db.ForeignKey('animals.animal_id'), nullable=False)
     user_id = db.Column(db.ForeignKey('user.user_id'), nullable=False)
 
-    image = db.Column(db.String)
+    title = db.Column(db.String)
+    image = db.Column(db.String, default="")
     comment = db.Column(db.String)
     currdate = db.Column(db.String(10))
 
-    def __init__(self, animal_id, user_id, image, comment, currdate):
+    def __init__(self, animal_id, user_id, title, image, comment, currdate):
         self.animal_id = animal_id
         self.user_id = user_id
+        self.title = title
         self.image = image
         self.comment = comment
         self.currdate = currdate
-
