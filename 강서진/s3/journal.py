@@ -4,6 +4,7 @@ import datetime
 from connect_db import db
 from sqlalchemy import and_
 from models import Journal
+import json
 
 from werkzeug.utils import secure_filename
 # from predict import padding, mk_img, predict_result
@@ -33,29 +34,17 @@ def s3_connection():
 
 
 # 파일 업로드 받아서 s3 업로드, 이미지 링크 반환
-def put_s3_img_url(f):
-    newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
+# def put_s3_img_url():
+#     f = request.files['file']
+#     newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
 
-    imgpath = f"./static/{newname}"
-    f.save(imgpath)
+#     imgpath = f"./static/{newname}"
+#     f.save(imgpath)
 
-    s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
-    img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+#     s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
+#     img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
     
-    return img_url
-
-
-# 쿼리 결과를 딕셔너리로 변환
-def query_to_dict(objs):
-    try:
-        lst = []
-        for obj in objs:
-            obj = obj.__dict__
-            del obj['_sa_instance_state']
-            lst.append(obj)
-        return lst
-    except TypeError:
-        return None
+#     return img_url
 
 
 s3 = s3_connection()
@@ -63,67 +52,70 @@ s3 = s3_connection()
 
 @bp.route('/journal', methods = ['GET', 'POST'])
 def journal():
+    # 임의로 설정한 user & animal, 나중에 삭제
+    session['login'] = 'test'
+    session['curr_animal'] = 1
+
+    current_user = session['login']
+    current_animal = session['curr_animal']
+    current_date = datetime.datetime.now().date()
+
+    ## ----------------------------------------------------------
+
     if request.method == 'GET':
-
-        # 임의로 설정한 user & animal, 나중에 삭제
-        session['login'] = 'test'
-        session['curr_animal'] = 1
-
-        current_user = session['login']
-        current_animal = session['curr_animal']
-        current_date = datetime.datetime.now().date()
-
-        ## ----------------------------------------------------------
 
         today_entry = Journal.query.filter(and_(Journal.user_id==current_user,
                                                 Journal.currdate == current_date)).first()
-        today_entry = query_to_dict(today_entry)
-
+        
         # 오늘의 기록 존재시
         if today_entry != None:
+            today_entry = today_entry.__dict__
+            del today_entry['_sa_instance_state']
+
             return jsonify(today_entry)
 
         # 오늘의 기록이 없을 시
         else:
             return "journal entry form"
-        
 
     else: # POST
 
-        journal_entry = request.get_json()
+        journal_entry = request.form
+        
+        animal_id = current_animal
+        user_id = current_user
 
-        animal_id = journal_entry['animal_id']
-        user_id = journal_entry['user_id']
+        journal_entry = json.loads(journal_entry['data'])
 
         title = journal_entry['title']
         content = journal_entry['content']
-        currdate = journal_entry['currdate']
+        currdate = current_date
 
-        print(currdate)
 
-        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장
-        f = request.files['file']
+        try:
+            f = request.files['file']
+            newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
 
-        if f:
-            img_url = put_s3_img_url(f)
+            imgpath = f"./static/{secure_filename(newname)}"
+            f.save(imgpath)
+
+            s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
+            img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+
             image = img_url
-            new_entry = Journal(animal_id, user_id, title, image, content, currdate)
-            db.session.add(new_entry)
 
-
-        # 사진 업로드 x시 기록만 db 저장
-        else:
+        except: 
             image = ""
-            new_entry = Journal(animal_id, user_id, title, image, content, currdate)
-            
-            db.session.add(new_entry)
+
+        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장 / 사진 업로드 x시 image 링크 ""
+        new_entry = Journal(animal_id, user_id, title, image, content, currdate)
+        db.session.add(new_entry)
 
         db.session.commit()
     
-        return jsonify(journal_entry)
+        return jsonify(new_entry)
 
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
-
 
