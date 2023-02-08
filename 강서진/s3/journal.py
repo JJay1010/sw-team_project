@@ -11,8 +11,6 @@ from werkzeug.utils import secure_filename
 
 from config import AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_BUCKET_REGION
 
-import os
-
 # app = Flask(__name__)
 bp = Blueprint('journal', __name__, url_prefix='/')
 
@@ -56,7 +54,6 @@ def journal():
         
         # 오늘의 기록 존재시
         if today_entry != None:
-
             return redirect(url_for('journal.journal_update'))
 
         # 오늘의 기록이 없을 시
@@ -75,7 +72,6 @@ def journal():
         title = journal_entry['title']
         content = journal_entry['content']
         currdate = current_date
-
 
         try:
             f = request.files['file']
@@ -111,8 +107,11 @@ def journal_update():
     current_animal = session['curr_animal']
     current_date = datetime.datetime.now().date()
 
-    if request.method == 'GET':
+    today_entry = Journal.query.filter(and_(Journal.user_id==current_user,
+                                        Journal.animal_id==current_animal,
+                                        Journal.currdate == current_date)).first()
 
+    if request.method == 'GET':
         today_entry = Journal.query.filter(and_(Journal.user_id==current_user,
                                                 Journal.animal_id==current_animal,
                                                 Journal.currdate == current_date)).first()
@@ -122,10 +121,9 @@ def journal_update():
         return jsonify(today_entry)
 
     else: #POST
-
-        today_entry = Journal.query.filter(and_(Journal.user_id==current_user,
-                                                Journal.animal_id==current_animal,
-                                                Journal.currdate == current_date)).first()
+        # today_entry = Journal.query.filter(and_(Journal.user_id==current_user,
+        #                                         Journal.animal_id==current_animal,
+        #                                         Journal.currdate == current_date)).first()
 
         journal_entry = request.form
         journal_entry = json.loads(journal_entry['data'])
@@ -157,7 +155,6 @@ def journal_update():
 
         # 새로 이미지 업로드 X --> 기존의 image 칼럼 데이터 그대로 유지
         else:
-
             today_entry.title = title
             today_entry.content = content
 
