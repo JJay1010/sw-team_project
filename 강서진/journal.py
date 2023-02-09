@@ -53,7 +53,7 @@ s3 = s3_connection()
 
 # 기록 목록 출력
 @bp.route('/journals', methods = ['GET'])
-def journals(current_user, current_animal):
+def journals():
     # 임의로 설정한 user & animal, 나중에 삭제
     session['login'] = 'test'
     session['curr_animal'] = 1
