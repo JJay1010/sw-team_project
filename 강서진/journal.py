@@ -51,21 +51,21 @@ def query_to_dict(objs):
 s3 = s3_connection()
 
 
-@bp.route('/journals/<current_user>', methods = ['GET'])
-def journals(current_user):
+# 기록 목록 출력
+@bp.route('/journals', methods = ['GET'])
+def journals(current_user, current_animal):
     # 임의로 설정한 user & animal, 나중에 삭제
     session['login'] = 'test'
     session['curr_animal'] = 1
 
     current_user = session['login']
     current_animal = session['curr_animal']
-    current_date = datetime.datetime.now().date()
 
     ## ----------------------------------------------------------
 
     if request.method == 'GET':
         
-        # 최신순으로
+        # order by도 넣어야 할 듯(최신순?)
         journals = Journal.query.filter(and_(Journal.user_id==current_user,
                                             Journal.animal_id==current_animal)).all()
         
@@ -80,19 +80,21 @@ def journals(current_user):
 
 
 # 아이템 클릭 시 기록 열람
-@bp.route('/content/<int:journal_index>', methods=["GET"])
-def journal_content(journal_index):
+@bp.route('/content ', methods=["GET"])
+def journal_content():
 
     session['login'] = 'test'
     session['curr_animal'] = 1
 
     current_user = session['login']
     current_animal = session['curr_animal']
+    journal_index = request.headers['index']
 
     journal_entry = Journal.query.get(journal_index)
     
     journal_entry = journal_entry.__dict__
     del journal_entry['_sa_instance_state']
+
     return jsonify(journal_entry)
 
 
@@ -104,7 +106,6 @@ def journal_factory():
 
     current_user = session['login']
     current_animal = session['curr_animal']
-    current_date = datetime.datetime.now().date()
 
     if request.method == "GET":
         return "journal entry form"
@@ -120,10 +121,11 @@ def journal_factory():
 
         title = journal_entry['title']
         content = journal_entry['content']
-        currdate = current_date
+        currdate = request.headers['currdate']
 
-        try:
-            f = request.files['file']
+        f = request.files['file']
+
+        if f:
             newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
 
             imgpath = f"./static/{secure_filename(newname)}"
@@ -131,11 +133,13 @@ def journal_factory():
 
             s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
             img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+            os.remove(imgpath)
 
             image = img_url
 
-        except: 
+        else: 
             image = ""
+            
 
         # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장 / 사진 업로드 x시 image 링크 ""
         new_entry = Journal(animal_id, user_id, title, image, content, currdate)
@@ -147,8 +151,8 @@ def journal_factory():
 
 
 # 기록 수정
-@bp.route('/update/<int:journal_index>', methods=["GET","PUT"])
-def journal_update(journal_index):
+@bp.route('/update', methods=["GET","PUT"])
+def journal_update():
 
     # 나중에 삭제
     session['login'] = 'test'
@@ -156,9 +160,9 @@ def journal_update(journal_index):
 
     current_user = session['login']
     current_animal = session['curr_animal']
-    current_date = datetime.datetime.now().date()
+    current_date = request.headers['currdate']
+    journal_index = request.headers['index']
     
-
     if request.method == 'GET':
         editing_entry = Journal.query.get(journal_index)
         existing_entry = editing_entry.__dict__
@@ -180,16 +184,14 @@ def journal_update(journal_index):
 
         # 새로 이미지 업로드
         if f:
-            # 기존의 이미지 로컬, s3에서 삭제
+            # 기존의 이미지 s3에서 삭제
             try:
                 s3.delete_object(
                     Bucket = AWS_S3_BUCKET_NAME,
                     Key = (editing_entry.image).split('/')[-1]
                 )
-                filename = './static/'+(editing_entry.image).split('/')[-1]
-                os.remove(filename)
 
-            # 기존에 이미지가 없었던 경우
+            # 기존에 이미지가 없었던 경우 -- pass
             except: 
                 pass
 
@@ -203,28 +205,32 @@ def journal_update(journal_index):
 
         # 새로 이미지 업로드 X --> 기존의 image 칼럼 데이터 그대로 유지
         else:
+            # 이미지가 있었는데 삭제하는 건?????
+
             pass
 
         editing_entry.title = title
         editing_entry.content = content
-        
-
-        # 이미지 삭제 시에는???
 
         db.session.commit()
     return "successfully updated"
 
 
 # 기록 삭제
-@bp.route('/delete/<int:journal_index>',methods=["DELETE"])
-def journal_delete(journal_index):
+@bp.route('/delete',methods=["DELETE"])
+def journal_delete():
+
+    journal_index = int(request.headers['index'])
 
     deleting_journal = Journal.query.get(journal_index)
 
-    s3.delete_object(
-                Bucket = AWS_S3_BUCKET_NAME,
-                Key = (deleting_journal.image).split('/')[-1]
-            )
+    if deleting_journal.image != "":
+        s3.delete_object(
+                        Bucket = AWS_S3_BUCKET_NAME,
+                        Key = (deleting_journal.image).split('/')[-1]
+                        )
+    else:
+        pass
 
     db.session.delete(deleting_journal)
     db.session.commit()
