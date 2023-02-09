@@ -70,7 +70,7 @@ def journals():
                                             Journal.animal_id==current_animal)).all()
         
         # 기록 존재시
-        if journals != None:
+        if journals != []:
             journals = query_to_dict(journals)
             return jsonify(journals)
 
@@ -90,7 +90,6 @@ def journal_content():
     current_animal = session['curr_animal']
 
     journal_index = request.headers['index']
-    
     journal_entry = Journal.query.get(int(journal_index))
     
     journal_entry = journal_entry.__dict__
@@ -125,24 +124,23 @@ def journal_factory():
         currdate = request.headers['currdate']
 
         f = request.files['file']
-
+        
+        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장 / 사진 업로드 x시 image 링크 ""
         if f:
             newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
 
             imgpath = f"./static/{secure_filename(newname)}"
-            f.save(imgpath)
+            f.save(imgpath) # 로컬에 저장
 
-            s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
+            s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname) # s3에 업로드
             img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
-            os.remove(imgpath)
+            os.remove(imgpath) # 로컬에 저장된 파일 삭제
 
             image = img_url
 
         else: 
             image = ""
-            
 
-        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장 / 사진 업로드 x시 image 링크 ""
         new_entry = Journal(animal_id, user_id, title, image, content, currdate)
         db.session.add(new_entry)
 
@@ -161,11 +159,13 @@ def journal_update():
 
     current_user = session['login']
     current_animal = session['curr_animal']
+    
     current_date = request.headers['currdate']
     journal_index = request.headers['index']
     
     if request.method == 'GET':
         editing_entry = Journal.query.get(journal_index)
+        
         existing_entry = editing_entry.__dict__
         del existing_entry['_sa_instance_state']
         return jsonify(existing_entry)
@@ -173,8 +173,9 @@ def journal_update():
 
     else: # POST
         
+        journal_index = request.headers['index']
         editing_entry = Journal.query.get(journal_index)
-
+        
         changes = request.form
         changes = json.loads(changes['data'])
 
@@ -206,6 +207,7 @@ def journal_update():
 
         # 새로 이미지 업로드 X --> 기존의 image 칼럼 데이터 그대로 유지
         else:
+            
             # 이미지가 있었는데 삭제하는 건?????
 
             pass
