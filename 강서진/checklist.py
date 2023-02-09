@@ -12,17 +12,7 @@ import datetime
 from connect_db import db
 import json
 
-app = Flask(__name__)
-
-app.register_blueprint(update.bp)
-app.register_blueprint(journal.bp)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
-app.config['SECRET_KEY'] = "test"
-db.init_app(app)
-
-Migrate(app,db)
-
+bp = Blueprint('checklist', __name__, url_prefix='/checklist')
 
 # -----------------
 # from db.query to dictionary (in list)
@@ -69,18 +59,17 @@ def json_to_new_cr(animal_id, routine):
     return new_cr
 
 
-@app.route('/checklist', methods=["GET", "POST"])
+@bp.route('/checklist', methods=["GET", "POST"])
 def checklist():
 
     # 임의로 설정한 user & animal, 나중에 삭제
     session['login'] = 'test'
     session['curr_animal'] = 1
 
-
     # user, animal, today's date, weekday(num)
     current_user = session['login']
     current_animal = session['curr_animal']
-    current_date = datetime.datetime.now().date()
+    current_date = request.headers['currdate']
     current_weekday_num = str(datetime.datetime.now().weekday())
 
 
@@ -149,7 +138,3 @@ def checklist():
         db.session.commit()
 
     return jsonify(checks)        
-
-
-if __name__ == "__main__":
-    app.run(debug=True)

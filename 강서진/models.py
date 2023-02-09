@@ -1,8 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
 import datetime
 from connect_db import db
-import json
+from sqlalchemy.orm import declarative_base, relationship
+
+
+Base = declarative_base()
 # db = SQLAlchemy()
+
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -10,6 +14,7 @@ class User(db.Model):
     user_id = db.Column(db.String(10), primary_key=True, nullable=False, unique=True)
     pw = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(40), nullable=False, unique=True)
+
 
     def __init__(self, user_id, username, pw, email):
         self.user_id = user_id
@@ -28,6 +33,7 @@ class Animal(db.Model):
     sex = db.Column(db.String(10))
     neutered = db.Column(db.String(10))
     weight = db.Column(db.Float)
+
 
     def __init__(self, animal_id, user_id, animal_name, bday, sex, neutered, weight):
         self.animal_id = animal_id
