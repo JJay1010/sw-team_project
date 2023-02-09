@@ -80,7 +80,7 @@ def journals():
 
 
 # 아이템 클릭 시 기록 열람
-@bp.route('/content ', methods=["GET"])
+@bp.route('/content', methods=["GET"])
 def journal_content():
 
     session['login'] = 'test'
@@ -88,9 +88,10 @@ def journal_content():
 
     current_user = session['login']
     current_animal = session['curr_animal']
-    journal_index = request.headers['index']
 
-    journal_entry = Journal.query.get(journal_index)
+    journal_index = request.headers['index']
+    
+    journal_entry = Journal.query.get(int(journal_index))
     
     journal_entry = journal_entry.__dict__
     del journal_entry['_sa_instance_state']
