@@ -5,6 +5,7 @@ from connect_db import db
 from sqlalchemy import and_
 from models import Journal
 import json
+import os
 
 from werkzeug.utils import secure_filename
 # from predict import padding, mk_img, predict_result
@@ -94,7 +95,8 @@ def journal_content(journal_index):
     del journal_entry['_sa_instance_state']
     return jsonify(journal_entry)
 
-    
+
+# 기록 생성
 @bp.route('/factory', methods=["GET","POST"])
 def journal_factory():
     session['login'] = 'test'
@@ -144,7 +146,8 @@ def journal_factory():
         return "journal successfully created"
 
 
-@bp.route('/update/<int:journal_index>', methods=["GET","POST"])
+# 기록 수정
+@bp.route('/update/<int:journal_index>', methods=["GET","PUT"])
 def journal_update(journal_index):
 
     # 나중에 삭제
@@ -154,16 +157,18 @@ def journal_update(journal_index):
     current_user = session['login']
     current_animal = session['curr_animal']
     current_date = datetime.datetime.now().date()
-
-    editing_entry = Journal.query.get(journal_index)
-
-    existing_entry = editing_entry.__dict__
-    del existing_entry['_sa_instance_state']
+    
 
     if request.method == 'GET':
+        editing_entry = Journal.query.get(journal_index)
+        existing_entry = editing_entry.__dict__
+        del existing_entry['_sa_instance_state']
         return jsonify(existing_entry)
 
+
     else: # POST
+        
+        editing_entry = Journal.query.get(journal_index)
 
         changes = request.form
         changes = json.loads(changes['data'])
@@ -175,35 +180,34 @@ def journal_update(journal_index):
 
         # 새로 이미지 업로드
         if f:
-            # 기존의 이미지 삭제
+            # 기존의 이미지 로컬, s3에서 삭제
             try:
                 s3.delete_object(
                     Bucket = AWS_S3_BUCKET_NAME,
                     Key = (editing_entry.image).split('/')[-1]
                 )
+                filename = './static/'+(editing_entry.image).split('/')[-1]
+                os.remove(filename)
 
             # 기존에 이미지가 없었던 경우
             except: 
                 pass
 
             newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
-
             imgpath = f"./static/{secure_filename(newname)}"
             f.save(imgpath)
             
             s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname)
             img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
-
-            editing_entry.title = title
-            print(editing_entry.title)
-            editing_entry.content = content
             editing_entry.image = img_url
-
 
         # 새로 이미지 업로드 X --> 기존의 image 칼럼 데이터 그대로 유지
         else:
-            editing_entry.title = title
-            editing_entry.content = content
+            pass
+
+        editing_entry.title = title
+        editing_entry.content = content
+        
 
         # 이미지 삭제 시에는???
 
@@ -211,6 +215,7 @@ def journal_update(journal_index):
     return "successfully updated"
 
 
+# 기록 삭제
 @bp.route('/delete/<int:journal_index>',methods=["DELETE"])
 def journal_delete(journal_index):
 
