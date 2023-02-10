@@ -1,13 +1,9 @@
 from flask import Flask, request, jsonify, session, Blueprint, url_for, redirect
-from flask_sqlalchemy import SQLAlchemy
 from models import User, Animal
 from connect_db import db
 from sqlalchemy import and_
-import json
 from flask import flash
-import datetime
 from sqlalchemy import and_
-from markupsafe import escape
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -16,8 +12,6 @@ bp = Blueprint('authentification', __name__, url_prefix='/auth')
 
 @bp.route('/register', methods=['GET','POST']) #GET(정보보기), POST(정보수정) 메서드 허용
 def register():
-    pw = "12341234@"
-    print(generate_password_hash(pw))
 
     if request.method=="POST":
         forms = request.get_json()
@@ -102,19 +96,17 @@ def register_animal():
         return redirect('authentification.main')
 
     else:
-
         if request.method=="POST":
-        
-            user_id = session['user_id'] #세션에 저장된 id값 받아오기
 
-            user_id = user_id
+            user = User.query.filter_by(user_id = session['user_id']).first()
+            
             animal_name = param['animal_name']
             bday = param['bday']
             sex = param['sex']
             neutered = param['neutered']
             weight = param['weight']
 
-            animal = Animal(user_id=user_id, animal_name=animal_name, bday=bday, sex=sex, neutered=neutered, weight=weight) #relationship에 user 객체 넘겨주기
+            animal = Animal(user = user, animal_name=animal_name, bday=bday, sex=sex, neutered=neutered, weight=weight)
 
             db.session.add(animal)
             db.session.commit()
