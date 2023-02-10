@@ -125,10 +125,12 @@ def journal_factory():
         currdate = request.headers['currdate']
 
         f = request.files['file']
-        
         # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장 / 사진 업로드 x시 image 링크 ""
         if f:
             newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
+
+            # with open(f, "rb") as file:
+            #     s3.upload_fileobj(file, AWS_S3_BUCKET_NAME, secure_filename(newname))
 
             imgpath = f"./static/{secure_filename(newname)}"
             f.save(imgpath) # 로컬에 저장
@@ -220,19 +222,21 @@ def journal_update():
     return "successfully updated"
 
 
-# 기록 삭제 (header로 인덱스 받기 --> journal json 받아서 )
+# 기록 삭제 (header로 인덱스 받기)
 @bp.route('/delete',methods=["DELETE"])
 def journal_delete():
-    # journal_index = int(request.headers['index'])
-    # deleting_journal = Journal.query.get(journal_index)
+    journal_index = int(request.headers['index'])
+    deleting_journal = Journal.query.get(journal_index)
 
-    deletion = request.get_json()
+    # deletion = request.get_json()
 
-    journal_index = deletion['index']
-    journal_title = deletion['title']
+    # journal_index = deletion['index']
+    # journal_title = deletion['title']
 
-    deleting_journal = Journal.query.filter(and_(Journal.index == journal_index,
-                                                Journal.title == journal_title)).first()
+    # deleting_journal = Journal.query.filter(and_(Journal.index == journal_index,
+                                                # Journal.title == journal_title)).first()
+
+    deleting_journal = Journal.query.get(journal_index)
 
     if deleting_journal.image != "":
         s3.delete_object(
