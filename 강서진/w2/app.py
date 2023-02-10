@@ -8,6 +8,7 @@ import authentification
 import routine
 import checklist
 import journal
+import profile
 from connect_db import db
 
 
@@ -18,6 +19,7 @@ app.register_blueprint(authentification.bp)
 app.register_blueprint(checklist.bp)
 app.register_blueprint(journal.bp)
 app.register_blueprint(routine.bp)
+app.register_blueprint(profile.bp)
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pet_test.db'
