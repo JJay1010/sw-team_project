@@ -1,15 +1,1 @@
-디렉토리:
-pet_pj
-  ---pybo
-      ---views
-        test.py
-        auth.py
-        health.py
-        routine.py
-        
-    
-  
-  
-      ---__init__.py
-  ---config.py
-  ---pet.db
+views 폴더 안에 기능별로 py 파일 정리
