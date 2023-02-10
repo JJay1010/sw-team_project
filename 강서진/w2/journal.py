@@ -99,6 +99,7 @@ def journal_content():
 
 
 # 기록 생성
+# 에러 발생 시 반환하는 값?
 @bp.route('/factory', methods=["GET","POST"])
 def journal_factory():
     session['login'] = 'test'
@@ -219,13 +220,19 @@ def journal_update():
     return "successfully updated"
 
 
-# 기록 삭제
+# 기록 삭제 (header로 인덱스 받기 --> journal json 받아서 )
 @bp.route('/delete',methods=["DELETE"])
 def journal_delete():
+    # journal_index = int(request.headers['index'])
+    # deleting_journal = Journal.query.get(journal_index)
 
-    journal_index = int(request.headers['index'])
+    deletion = request.get_json()
 
-    deleting_journal = Journal.query.get(journal_index)
+    journal_index = deletion['index']
+    journal_title = deletion['title']
+
+    deleting_journal = Journal.query.filter(and_(Journal.index == journal_index,
+                                                Journal.title == journal_title)).first()
 
     if deleting_journal.image != "":
         s3.delete_object(

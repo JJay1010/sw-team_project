@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, session, Blueprint, url_for, redirect
 from flask_sqlalchemy import SQLAlchemy
-from models import User
+from models import User, Animal
 from connect_db import db
 from sqlalchemy import and_
 import json
@@ -11,78 +11,117 @@ from markupsafe import escape
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-bp = Blueprint('authetification', __name__, url_prefix='/auth')
+bp = Blueprint('authentification', __name__, url_prefix='/auth')
 
 
 @bp.route('/register', methods=['GET','POST']) #GET(정보보기), POST(정보수정) 메서드 허용
 def register():
-    
+    pw = "12341234@"
+    print(generate_password_hash(pw))
+
     if request.method=="POST":
         forms = request.get_json()
-        userid = forms['userid']
-        email = forms['email']
-        password = forms['password']
 
-        user = User(user_id = userid,
-                        pw=generate_password_hash(password), email=email
-                        )
-        #유효성 검사
+        user_id = forms['user_id']
+        pw = generate_password_hash(forms['pw'])
+        email = forms['email']
+
+        user = User(user_id = user_id, password=pw, email=email)
+
+        # 중복 검사
         check_email = User.query.filter(User.email==email).first()
-        check_userid = User.query.filter(User.userid==userid).first()
+        check_userid = User.query.filter(User.user_id==user_id).first()
         
         if check_userid:
-            flash("사용 중인 아이디입니다.", category='error')
-            return redirect(url_for('register'))
+            # flash("사용 중인 아이디입니다.", category='error')
+
+            return redirect(url_for('authentification.register'))
+
         if check_email:
-            flash("이미 가입된 이메일입니다.", category='error')
-            return redirect(url_for('register'))
+            # flash("이미 가입된 이메일입니다.", category='error')
+            return redirect(url_for('authentification.register'))
 
-
-        db.session.add(user)  # id, name 변수에 넣은 회원정보 DB에 저장
+        db.session.add(user)  # id, pw(hash), email 변수에 넣은 회원정보 DB에 저장
         db.session.commit()  #커밋
-        flash("가입완료")
-        return redirect(url_for('login'))
 
-    
+        return redirect(url_for('authentification.login'))
+
+    else: # GET
+        return "registration form"
+
 
 @bp.route('/login', methods=['GET','POST'])  
 def login():
     if request.method=="POST":
+
         forms = request.get_json()
-        userid = forms['userid']
-        email = forms['email']
-        password = forms['password'] 
-         #로그인 폼 생성
+
+        user_id = forms['user_id']
+        password = forms['password']
+
          #유효성 검사
-         
-        
-        user = User.query.filter(User.user_id == userid).first()
+        user = User.query.filter(User.user_id == user_id).first()
+
         if not user:
-            error = "존재하지 않는 사용자입니다."
-        elif not check_password_hash(userid, password):
-            error = "비밀번호가 올바르지 않습니다."
-        if error is None:
-            session.clear()
-            session['userid'] = userid #form에서 가져온 userid를 session에 저장
-            
-            return jsonify(forms)
-            
-        flash(error)
+            return "error - user not in db"
         
-        # return redirect('/') #로그인에 성공하면 홈화면으로 redirect
+        elif not check_password_hash(user.password, password):
+            return "error - wrong pw"
+
+        else:
+            session.clear()
+            session['user_id'] = user_id #form에서 가져온 user_id를 session에 저장
             
-    return jsonify(forms) #보류 아마도 animal쪽으로..?
+            return f"{session['user_id']} logged in"
+        
+        # return  #로그인에 성공하면 홈화면으로 redirect
+    
+    else: # GET
+        return "login form"
+
 
 @bp.route('/logout',methods=['GET'])
 def logout():
-    session.pop('userid',None)
-    return redirect(url_for('main'))
+    session.pop('user_id', None)
+    return redirect(url_for('authentification.main'))
 
 
-@bp.route('/')
+@bp.route('/', methods=["GET"])
 def main():
-    if 'userid' in session:  # session안에 userid가 있으면 로그인
-        return '로그인 성공! 아이디는 %s' % escape(session['userid']) + \
-            "<br><a href = '/logout'>로그아웃</a>"
+    if 'user_id' in session:  # session안에 user_id가 있으면 로그인
+        return f"{session['user_id']} is logged in"
 
-    return "로그인 해주세요. <br><a href = '/login'> 로그인 하러가기! </a>" # 로그인이 안될 경우
+    return "not logged in" # 로그인이 안된 경우
+
+
+@bp.route('/register_animal', methods=['GET','POST'])
+def register_animal():
+    param = request.get_json()
+
+    if 'user_id' not in session:
+        return redirect('authentification.main')
+
+    else:
+
+        if request.method=="POST":
+        
+            user_id = session['user_id'] #세션에 저장된 id값 받아오기
+
+            user_id = user_id
+            animal_name = param['animal_name']
+            bday = param['bday']
+            sex = param['sex']
+            neutered = param['neutered']
+            weight = param['weight']
+
+            animal = Animal(user_id=user_id, animal_name=animal_name, bday=bday, sex=sex, neutered=neutered, weight=weight) #relationship에 user 객체 넘겨주기
+
+            db.session.add(animal)
+            db.session.commit()
+
+            return "animal registered"
+            
+        else: # GET
+            return "animal registration form"
+
+        
