@@ -90,15 +90,20 @@ def main():
 
 @bp.route('/register_animal', methods=['GET','POST'])
 def register_animal():
+
     param = request.get_json()
 
-    if 'user_id' not in session:
-        return redirect('authentification.main')
+    try:
+        session['login'] = request.headers['user_id']
+
+    except:
+        if 'user_id' not in session:
+            return redirect('authentification.main')
 
     else:
         if request.method=="POST":
 
-            user = User.query.filter_by(user_id = session['user_id']).first()
+            user = User.query.filter_by(user_id = session['login']).first()
             
             animal_name = param['animal_name']
             bday = param['bday']
@@ -110,6 +115,10 @@ def register_animal():
 
             db.session.add(animal)
             db.session.commit()
+
+            # 등록 후 세션에 동물 id 등록해야
+
+
 
             return "animal registered"
             

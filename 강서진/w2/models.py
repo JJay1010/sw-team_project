@@ -71,7 +71,7 @@ class ChecklistDefault(db.Model):
     currdate = db.Column(db.String(20), nullable=False, default=datetime.datetime.now().date())
     animal_id = db.Column(db.ForeignKey('animals.animal_id', ondelete='CASCADE'), nullable=False)
 
-    animal = db.relationship('Animal', backref=db.backref('routine_set'))
+    animal = db.relationship('Animal', backref=db.backref('checklistDefault_set'))
 
     food = db.Column(db.String(10))
     bowels = db.Column(db.String(10))
@@ -145,11 +145,16 @@ class Health(db.Model):
     image = db.Column(db.String, default="")
     comment = db.Column(db.String)
     currdate = db.Column(db.String(10))
+    animal_type = db.Column(db.String)
+    bodypart = db.Column(db.String)
 
-    def __init__(self, animal, user, content, image, comment, currdate):
+
+    def __init__(self, animal, user, content, image, comment, currdate, animal_type, bodypart):
         self.animal = animal
         self.user = user
         self.content = content
         self.image = image
         self.comment = comment
         self.currdate = currdate
+        self.animal_type = animal_type
+        self.bodypart = bodypart
