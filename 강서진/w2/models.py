@@ -36,15 +36,17 @@ class Animal(db.Model):
     sex = db.Column(db.String(10))
     neutered = db.Column(db.String(10))
     weight = db.Column(db.Float)
+    image = db.Column(db.String, default="")
 
 
-    def __init__(self, user, animal_name, bday, sex, neutered, weight):
+    def __init__(self, user, animal_name, bday, sex, neutered, weight, image):
         self.user = user
         self.animal_name = animal_name
         self.bday = bday
         self.sex = sex
         self.neutered = neutered
         self.weight = weight
+        self.image = image
 
 
 class Routine(db.Model):
