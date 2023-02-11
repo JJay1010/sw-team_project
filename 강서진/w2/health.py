@@ -101,25 +101,46 @@ def record_factory():
             f = request.files['file']
 
             if f:
-                newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
+                # predict.py 함수로 전처리 후 모델 돌리기
+                # f 로 모델 돌려서 나온 값 db에 저장
+                # 결과 나오는 데 지연됨 --> Lazy Loading View ?
 
+
+                # 🔻 인공지능 팀에서 받은 predict.py와 app.py 🔻
+
+                # 모델 서버 내 저장 경로
+                # path = "./static/efficientNet_Ab01_224_128_0_001_half_frz.h5"
+
+                # 이미지 전처리
+                # img = mk_img(img_path)
+                
+                # 모델 결과 
+                # result = predict_result(path, img)
+
+
+                # -------------
+                # 기존의 s3에 이미지 업로드 하는 코드
+                # -------------
+                newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
                 imgpath = f"./static/{secure_filename(newname)}"
+
                 f.save(imgpath) # 로컬에 저장
 
                 s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname) # s3에 업로드
                 img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+
                 os.remove(imgpath) # 로컬에 저장된 파일 삭제
 
                 image = img_url
+
+                # 진단 결과
+                # content = 
+
+                # 진단 결과에 따른 피드백 (ex 질병 유의사항, 증상 등)
+                # comment = 
+
             else:
                 return "error - no image to diagnose"
-
-            # f 로 모델 돌려서 나온 값 db에 저장
-            # predict.py 함수로 전처리 후 모델 돌리기
-            # 결과 나오는 데 지연됨 --> Lazy Loading View ?
-
-            # content = 
-            # comment = 
 
             new_record = Health(animal, user, image, content, comment, currdate, kind, affected_area)
 
