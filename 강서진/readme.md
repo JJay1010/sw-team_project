@@ -34,3 +34,4 @@
 - 동물 정보 조회/수정, 동물 프로필 이미지 업로드/수정 기능 추가 (authentification.register_animal / pet.py)
 - 건강 기록 기능 (health.py) 목록, 조회, 삭제 구현(수정 기능은 x) (생성은 인공지능 모델 전달받은 후 구현, lazy loading 등에 대한 공부 필요)
 - session['login'] 요청 구분 ?
+- 시간이 되면 주말동안 ngrok 으로 백, 프론트 연결
