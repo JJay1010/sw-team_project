@@ -3,7 +3,7 @@ import boto3
 import datetime
 from connect_db import db
 from sqlalchemy import and_
-from models import Journal
+from models import User, Animal, Journal
 import json
 import os
 
@@ -54,42 +54,34 @@ s3 = s3_connection()
 # 기록 목록 출력
 @bp.route('/journals', methods = ['GET'])
 def journals():
-    # 임의로 설정한 user & animal, 나중에 삭제
-    session['login'] = 'test'
-    session['curr_animal'] = 1
+    # 유저아이디, 동물아이디
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
 
-    current_user = session['login']
-    current_animal = session['curr_animal']
-
-    ## ----------------------------------------------------------
-
-    if request.method == 'GET':
-        
+## ----------------------------------------------------------
         # order by도 넣어야 할 듯(최신순?)
-        journals = Journal.query.filter(and_(Journal.user_id==current_user,
-                                            Journal.animal_id==current_animal)).all()
-        
-        # 기록 존재시
-        if journals != []:
-            journals = query_to_dict(journals)
-            return jsonify(journals)
+    journals = Journal.query.filter(and_(Journal.user_id==session['login'],
+                                        Journal.animal_id==session['curr_animal'])).all()
+    
+    # 기록 존재시
+    if journals != []:
+        journals = query_to_dict(journals)
+        return jsonify(journals)
 
-        # 기록이 없을 시
-        else:
-            return None
+    # 기록이 없을 시
+    else:
+        return "no entry"
 
 
 # 아이템 클릭 시 기록 열람
 @bp.route('/content', methods=["GET"])
 def journal_content():
-
-    session['login'] = 'test'
-    session['curr_animal'] = 1
-
-    current_user = session['login']
-    current_animal = session['curr_animal']
+    # 유저아이디, 동물아이디
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
 
     journal_index = request.headers['index']
+
     journal_entry = Journal.query.get(int(journal_index))
     
     journal_entry = journal_entry.__dict__
@@ -99,24 +91,21 @@ def journal_content():
 
 
 # 기록 생성
-# 에러 발생 시 반환하는 값?
 @bp.route('/factory', methods=["GET","POST"])
 def journal_factory():
-    session['login'] = 'test'
-    session['curr_animal'] = 1
-
-    current_user = session['login']
-    current_animal = session['curr_animal']
+    # 유저아이디, 동물아이디, 날짜
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
+    currdate = request.headers['currdate']
 
     if request.method == "GET":
         return "journal entry form"
     
     else: # POST
-
         journal_entry = request.form
-        
-        animal_id = current_animal
-        user_id = current_user
+
+        user = User.query.filter_by(user_id = session['login']).first()
+        animal = Animal.query.filter_by(animal_id = session['curr_animal']).first()
 
         journal_entry = json.loads(journal_entry['data'])
 
@@ -125,12 +114,10 @@ def journal_factory():
         currdate = request.headers['currdate']
 
         f = request.files['file']
-        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장 / 사진 업로드 x시 image 링크 ""
+        
+        # 사진 업로드 시 사진 링크 반환, 일상 기록 db 저장
         if f:
             newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
-
-            # with open(f, "rb") as file:
-            #     s3.upload_fileobj(file, AWS_S3_BUCKET_NAME, secure_filename(newname))
 
             imgpath = f"./static/{secure_filename(newname)}"
             f.save(imgpath) # 로컬에 저장
@@ -140,11 +127,11 @@ def journal_factory():
             os.remove(imgpath) # 로컬에 저장된 파일 삭제
 
             image = img_url
-
+        # 사진 업로드 x시 image 링크
         else: 
             image = ""
 
-        new_entry = Journal(animal_id, user_id, title, image, content, currdate)
+        new_entry = Journal(animal, user, title, image, content, currdate)
         db.session.add(new_entry)
 
         db.session.commit()
@@ -156,14 +143,10 @@ def journal_factory():
 @bp.route('/update', methods=["GET","PUT"])
 def journal_update():
 
-    # 나중에 삭제
-    session['login'] = 'test'
-    session['curr_animal'] = 1
-
-    current_user = session['login']
-    current_animal = session['curr_animal']
+    # 유저아이디, 동물아이디
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
     
-    current_date = request.headers['currdate']
     journal_index = request.headers['index']
     
     if request.method == 'GET':
@@ -222,20 +205,11 @@ def journal_update():
     return "successfully updated"
 
 
-# 기록 삭제 (header로 인덱스 받기)
-@bp.route('/delete',methods=["DELETE"])
+# 기록 삭제
+@bp.route('/delete', methods=["DELETE"])
 def journal_delete():
+
     journal_index = int(request.headers['index'])
-    deleting_journal = Journal.query.get(journal_index)
-
-    # deletion = request.get_json()
-
-    # journal_index = deletion['index']
-    # journal_title = deletion['title']
-
-    # deleting_journal = Journal.query.filter(and_(Journal.index == journal_index,
-                                                # Journal.title == journal_title)).first()
-
     deleting_journal = Journal.query.get(journal_index)
 
     if deleting_journal.image != "":
