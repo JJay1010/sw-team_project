@@ -2,12 +2,35 @@ from flask import Flask, request, jsonify, session, Blueprint, url_for, redirect
 from models import User, Animal
 from connect_db import db
 from sqlalchemy import and_
-from flask import flash
+import json
+import boto3
+import datetime
 from sqlalchemy import and_
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+from config import AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_BUCKET_REGION
 
 
 bp = Blueprint('authentification', __name__, url_prefix='/auth')
+
+
+def s3_connection():
+    try:
+        s3 = boto3.client(
+            service_name="s3",
+            region_name=AWS_S3_BUCKET_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+        return s3
+
+    except Exception as e:
+        print(e)
+        print('ERROR_S3_CONNECTION_FAILED') 
+
+
+s3 = s3_connection()
 
 
 @bp.route('/register', methods=['GET','POST']) #GET(정보보기), POST(정보수정) 메서드 허용
@@ -98,13 +121,15 @@ def register_animal():
         if 'user_id' not in session:
             return redirect('authentification.main')
 
-    param = request.get_json()
-
     if request.method=="GET":
+        print(session['login'])
         return "animal registration form"
                
-        
+               
     else: # POST
+        param = request.form
+        param = json.loads(param['data'])
+
         user = User.query.filter_by(user_id = session['login']).first()
         
         animal_name = param['animal_name']
@@ -113,7 +138,22 @@ def register_animal():
         neutered = param['neutered']
         weight = param['weight']
 
-        animal = Animal(user = user, animal_name=animal_name, bday=bday, sex=sex, neutered=neutered, weight=weight)
+        f = request.files['file']
+        if f:
+            newname = session['login'] + '_' + animal_name + ".png"
+
+            imgpath = f"./static/{secure_filename(newname)}"
+            f.save(imgpath) # 로컬에 저장
+
+            s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname) # s3에 업로드
+            img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+            os.remove(imgpath) # 로컬에 저장된 파일 삭제
+
+            image = img_url
+        else:
+            image = ""
+
+        animal = Animal(user, animal_name, bday, sex, neutered, weight, image)
 
         db.session.add(animal)
         db.session.commit()
