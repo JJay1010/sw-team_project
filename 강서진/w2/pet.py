@@ -3,6 +3,9 @@ from models import User, Animal
 from connect_db import db
 from sqlalchemy import and_
 import boto3
+import json
+import os
+from werkzeug.utils import secure_filename
 from config import AWS_S3_BUCKET_NAME, AWS_S3_BUCKET_REGION, AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY
 
 
@@ -45,7 +48,7 @@ s3 = s3_connection()
 @bp.route('/management', methods=['GET'])
 def management():
     # 유저아이디
-    session['login'] = request.headers['user_id']
+    # session['login'] = request.headers['user_id']
 
     # 해당 아이디로 등록한 동물 전부
     animal_list = Animal.query.filter(Animal.user_id==session['login']).all()
@@ -75,7 +78,7 @@ def profile():
 
 @bp.route('/update', methods=["GET","PUT"])
 def info_update():
-    session['login'] = request.headers['user_id']
+    # session['login'] = request.headers['user_id']
     session['curr_animal'] = request.headers['animal_id']
 
     # 동물 정보 수정 페이지 접근
@@ -86,15 +89,57 @@ def info_update():
         return jsonify(animal)  
 
     # 수정 정보 전달 시
+    # 수정사항 하나씩 전송? or 수정사항 한번에 전송?
+
     else: # PUT
-        changes = request.get_json()
         animal = Animal.query.filter_by(animal_id = session['curr_animal']).first()
 
-        animal.animal_name = changes['animal_name']
-        animal.bday = changes['bday']
-        animal.sex = changes['sex']
-        animal.neutered = changes['neutered']
-        animal.weight = changes['weight']
+        # 새로 이미지 업로드
+        try:
+            f = request.files['file']
+
+            
+            changes = request.form
+            changes = json.loads(changes['data'])
+
+            animal.animal_name = changes['animal_name']
+            animal.bday = changes['bday']
+            animal.sex = changes['sex']
+            animal.neutered = changes['neutered']
+            animal.weight = changes['weight']
+
+            # 기존의 이미지 s3에서 삭제
+            try:
+                s3.delete_object(
+                    Bucket = AWS_S3_BUCKET_NAME,
+                    Key = (animal.image).split('/')[-1]
+                )
+
+            # 기존에 이미지가 없었던 경우 -- pass
+            except: 
+                pass
+
+            newname = session['login'] + '_' + animal.animal_name + ".png"
+
+            imgpath = f"./static/{secure_filename(newname)}"
+            f.save(imgpath) # 로컬에 저장
+
+            s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname) # s3에 업로드
+            img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+            os.remove(imgpath) # 로컬에 저장된 파일 삭제
+
+            animal.image = img_url
+            
+        # 이미지 업로드 x
+        # 이미지 삭제 시에는?
+        except:
+            changes = request.get_json()
+
+            animal.animal_name = changes['animal_name']
+            animal.bday = changes['bday']
+            animal.sex = changes['sex']
+            animal.neutered = changes['neutered']
+            animal.weight = changes['weight']
 
         db.session.commit()
 
@@ -108,6 +153,19 @@ def pet_delete():
 
     try:
         animal = Animal.query.filter_by(animal_id = session['curr_animal']).first()
+
+        # 프로필 이미지 s3에서 삭제
+        try:
+            s3.delete_object(
+                Bucket = AWS_S3_BUCKET_NAME,
+                Key = (animal.image).split('/')[-1]
+            )
+
+        # 기존에 이미지가 없었던 경우 -- pass
+        except: 
+            pass
+
+        # db에서 animal 삭제
         db.session.delete(animal)
         db.session.commit()
         return "successfully removed"
