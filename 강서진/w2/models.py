@@ -49,17 +49,18 @@ class Animal(db.Model):
 
 class Routine(db.Model):
     __tablename__= 'Routine'
-    routine_id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
+    index = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=False)
     animal_id = db.Column(db.ForeignKey('animals.animal_id', ondelete='CASCADE'), nullable=False)
+    routine_id = db.Column(db.Integer)
 
     animal = db.relationship('Animal', backref=db.backref('routine_set'))
 
     routine_name= db.Column(db.String(20), nullable=False)
-    weekday = db.Column(db.String(10), nullable=False)
+    weekday = db.Column(db.Integer, nullable=False)
 
-    def __init__(self, animal, routine_name, weekday):
+    def __init__(self, animal, routine_id, routine_name, weekday):
         self.animal = animal
-        # self.animal_id = animal_id
+        self.routine_id = routine_id
         self.routine_name = routine_name
         self.weekday = weekday
 
@@ -89,7 +90,7 @@ class ChecklistRoutine(db.Model):
     __tablename__='checklist_routine'
 
     index = db.Column(db.Integer, primary_key=True, nullable=False, unique=True, autoincrement=True)
-    routine_id = db.Column(db.ForeignKey('Routine.routine_id', ondelete='CASCADE'), nullable=False)
+    routine_index = db.Column(db.ForeignKey('Routine.index', ondelete='CASCADE'), nullable=False)
     animal_id = db.Column(db.ForeignKey('animals.animal_id', ondelete='CASCADE'), nullable=False)
 
     routine = db.relationship('Routine', backref=db.backref('checklistRoutine_set'))
@@ -97,7 +98,7 @@ class ChecklistRoutine(db.Model):
     
     currdate = db.Column(db.String(20), nullable=False, default=datetime.datetime.now().date())
     routine_name = db.Column(db.String(20))
-    status = db.Column(db.Integer, default="0")
+    status = db.Column(db.Integer, default=0)
 
     def __init__(self, currdate, animal, routine, routine_name, status):
         self.currdate = currdate
@@ -145,16 +146,16 @@ class Health(db.Model):
     image = db.Column(db.String, default="")
     comment = db.Column(db.String)
     currdate = db.Column(db.String(10))
-    animal_type = db.Column(db.String)
-    bodypart = db.Column(db.String)
+    kind = db.Column(db.String)
+    affected_area = db.Column(db.String)
 
 
-    def __init__(self, animal, user, content, image, comment, currdate, animal_type, bodypart):
+    def __init__(self, animal, user, content, image, comment, currdate, kind, affected_area):
         self.animal = animal
         self.user = user
         self.content = content
         self.image = image
         self.comment = comment
         self.currdate = currdate
-        self.animal_type = animal_type
-        self.bodypart = bodypart
+        self.kind = kind
+        self.affected_area = affected_area
