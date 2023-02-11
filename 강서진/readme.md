@@ -22,3 +22,11 @@
 - get에 필요한 정보는 request.header
 - 일상 기록 사진을 삭제할 경우 받을 정보 필요
 - health 테이블 title -> content 
+
+---2023.02.10---
+- models.py 수정 (외래키 참조 관계)
+- 로그인, 루틴, 체크리스트, 일상기록 기능 blueprint로 연결 (루틴 수정 필요)
+
+---2023.02.11---
+- db model 수정에 맞춰 checklist, journal 외래키 참조 수정 예정
+- 동물 정보 열람/수정 기능 구현
