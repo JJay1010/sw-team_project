@@ -20,7 +20,7 @@ def register():
         pw = generate_password_hash(forms['pw'])
         email = forms['email']
 
-        user = User(user_id = user_id, password=pw, email=email)
+        user = User(user_id = user_id, pw=pw, email=email)
 
         # 중복 검사
         check_email = User.query.filter(User.email==email).first()
@@ -51,7 +51,7 @@ def login():
         forms = request.get_json()
 
         user_id = forms['user_id']
-        password = forms['password']
+        password = forms['pw']
 
          #유효성 검사
         user = User.query.filter(User.user_id == user_id).first()
@@ -59,7 +59,7 @@ def login():
         if not user:
             return "error - user not in db"
         
-        elif not check_password_hash(user.password, password):
+        elif not check_password_hash(user.pw, password):
             return "error - wrong pw"
 
         else:
@@ -85,44 +85,44 @@ def main():
     if 'user_id' in session:  # session안에 user_id가 있으면 로그인
         return f"{session['user_id']} is logged in"
 
-    return "not logged in" # 로그인이 안된 경우
+    return redirect(url_for('authentification.login')) # 로그인이 안된 경우
 
 
 @bp.route('/register_animal', methods=['GET','POST'])
 def register_animal():
-
-    param = request.get_json()
-
     try:
         session['login'] = request.headers['user_id']
 
+    # 로그인 x시 로그인 창으로 리다이렉트
     except:
         if 'user_id' not in session:
             return redirect('authentification.main')
 
-    else:
-        if request.method=="POST":
+    param = request.get_json()
 
-            user = User.query.filter_by(user_id = session['login']).first()
-            
-            animal_name = param['animal_name']
-            bday = param['bday']
-            sex = param['sex']
-            neutered = param['neutered']
-            weight = param['weight']
-
-            animal = Animal(user = user, animal_name=animal_name, bday=bday, sex=sex, neutered=neutered, weight=weight)
-
-            db.session.add(animal)
-            db.session.commit()
-
-            # 등록 후 세션에 동물 id 등록해야
-
-
-
-            return "animal registered"
-            
-        else: # GET
-            return "animal registration form"
-
+    if request.method=="GET":
+        return "animal registration form"
+               
         
+    else: # POST
+        user = User.query.filter_by(user_id = session['login']).first()
+        
+        animal_name = param['animal_name']
+        bday = param['bday']
+        sex = param['sex']
+        neutered = param['neutered']
+        weight = param['weight']
+
+        animal = Animal(user = user, animal_name=animal_name, bday=bday, sex=sex, neutered=neutered, weight=weight)
+
+        db.session.add(animal)
+        db.session.commit()
+
+        curr_animal = Animal.query.filter(and_(Animal.user_id == session['login'],
+                                            Animal.animal_name == animal_name)).first()
+
+        curr_animal = curr_animal.__dict__
+        del curr_animal['_sa_instance_state']
+
+        return jsonify(curr_animal)
+        # 등록된 동물 정보 json 반환, 이 뒤로 header에 animal_id 주고받기
