@@ -3,8 +3,9 @@ import boto3
 import datetime
 from connect_db import db
 from sqlalchemy import and_
-from models import Health
+from models import User, Animal, Health
 import json
+import predict
 
 from werkzeug.utils import secure_filename
 # from predict import padding, mk_img, predict_result
@@ -13,7 +14,7 @@ from config import AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AW
 
 import os
 
-bp = Blueprint('health', __name__, url_prefix='/')
+bp = Blueprint('health', __name__, url_prefix='/health')
 
 # s3 클라이언트 생성
 def s3_connection():
@@ -45,20 +46,102 @@ def query_to_dict(objs):
 
 s3 = s3_connection()
 
-@bp.route('/health_records', methods=["GET"])
-def health_records():
-    # 임의로 설정한 user & animal, 나중에 삭제
-    session['login'] = 'test'
-    session['curr_animal'] = 1
+@bp.route('/records', methods=["GET"])
+def records():
+    # 유저아이디, 동물아이디
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
 
-    current_user = session['login']
-    current_animal = session['curr_animal']
-    current_date = datetime.datetime.now().date()
+    health_records = Health.query.filter(and_(Health.user_id==session['login'],
+                                            Health.animal_id==session['curr_animal'])).all()
+
+    if health_records != []:
+        health_records = query_to_dict(health_records)
+        return jsonify(health_records)
+    else:
+        return "no entry"
 
 
-    health_records = Health.query.filter(and_(Health.user_id==current_user,
-                                            Health.animal_id==current_animal)).all()
+@bp.route('/content', methods=["GET"])
+def record_content():
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
 
-    health_records = query_to_dict(health_records)
-    # print(health_records)
-    return jsonify(health_records)
+    record_index = request.headers['index']
+
+    health_record = Health.query.get(int(record_index))
+    health_record = health_record.__dict__
+    del health_record['_sa_instance_state']
+
+    return jsonify(health_record)
+
+
+@bp.route('/factory', methods=["GET","POST"])
+def record_factory():
+    # 유저아이디, 동물아이디, 날짜
+    session['login'] = request.headers['user_id']
+    session['curr_animal'] = request.headers['animal_id']
+
+    if request.method=="GET":
+        return "health record entry form"
+
+
+    else: # POST
+        try:
+            record = request.form
+            record = json.loads(record['data'])
+
+            user = User.query.filter_by(user_id = session['login']).first
+            animal = Animal.query.filter_by(animal_id = session['curr_animal']).first()
+
+            currdate = request.headers['currdate']
+            kind = record['kind']
+            affected_area = record['affected_area']
+
+            f = request.files['file']
+
+            if f:
+                newname = (str(datetime.datetime.now()).replace(":","")).replace(" ","_") + ".png"
+
+                imgpath = f"./static/{secure_filename(newname)}"
+                f.save(imgpath) # 로컬에 저장
+
+                s3.upload_file(imgpath, AWS_S3_BUCKET_NAME, newname) # s3에 업로드
+                img_url = f"https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{newname}"
+                os.remove(imgpath) # 로컬에 저장된 파일 삭제
+
+                image = img_url
+            else:
+                return "error - no image to diagnose"
+
+            # f 로 모델 돌려서 나온 값 db에 저장
+            # predict.py 함수로 전처리 후 모델 돌리기
+            # 결과 나오는 데 지연됨 --> Lazy Loading View ?
+
+            # content = 
+            # comment = 
+
+            new_record = Health(animal, user, image, content, comment, currdate, kind, affected_area)
+
+            db.session.add(new_record)
+            db.session.commit()
+
+            return "successfully created health record"
+        except:
+            return "failed to create health record"
+
+
+@bp.route('/delete', methods=["DELETE"])
+def record_delete():
+    record_index = int(request.headers['index'])
+    deleting_record = Health.query.get(record_index)
+
+    s3.delete_object(
+                    Bucket = AWS_S3_BUCKET_NAME,
+                    Key = (deleting_record.image).split('/')[-1]
+                    )
+
+    db.session.delete(deleting_record)
+    db.session.commit()
+    
+    return "record successfully removed"
