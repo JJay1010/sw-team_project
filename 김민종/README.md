@@ -8,4 +8,4 @@ Temp Repo
 2/12 일상 기록 수정 기능 구현  
 2/13 설정화면 및 다중 동물 선택 기능    
   
-[팀 전체 레포지토리] (https://github.com/Sxbxn/Furry_Friends/tree/android)  
+[팀 전체 레포지토리](https://github.com/Sxbxn/Furry_Friends/tree/android)  
