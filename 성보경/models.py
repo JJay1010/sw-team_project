@@ -9,7 +9,7 @@ class User(db.Model):
     user_id = db.Column(db.String(10), primary_key=True, nullable=False, unique=True)
     pw = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(40), nullable=False, unique=True)
-    type = db.Column(db.String(), nullable=False) #의료진인지 아닌지
+    type = db.Column(db.Integer, nullable=False) #의료진인지 아닌지
 
 
     def __init__(self, user_id, pw, email, type):
